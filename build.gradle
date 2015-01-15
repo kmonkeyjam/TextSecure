@@ -21,9 +21,6 @@ repositories {
         url "https://raw.github.com/whispersystems/maven/master/preferencefragment/releases/"
     }
     maven {
-        url "https://raw.github.com/whispersystems/maven/master/gson/releases/"
-    }
-    maven {
         url "https://raw.github.com/whispersystems/maven/master/smil/releases/"
     }
     maven {
@@ -80,7 +77,6 @@ dependencyVerification {
             'com.android.support:appcompat-v7:5dbeb5316d0a6027d646ae552804c3baa5e3bd53f7f33db50904d51505c8a0e5',
             'com.melnykov:floatingactionbutton:0679ad9f7d61eb7aeab91e8dc56358cdedd5b1c1b9c48464499ffa05c40d3985',
             'com.google.zxing:android-integration:89e56aadf1164bd71e57949163c53abf90af368b51669c0d4a47a163335f95c4',
-            'com.android.support:support-v4-preferencefragment:5470f5872514a6226fa1fc6f4e000991f38805691c534cf0bd2778911fc773ad',
             'com.squareup.dagger:dagger:789aca24537022e49f91fc6444078d9de8f1dd99e1bfb090f18491b186967883',
             'com.doomonafireball.betterpickers:library:132ecd685c95a99e7377c4e27bfadbb2d7ed0bea995944060cd62d4369fdaf3d',
             'org.whispersystems:jobmanager:01f35586c43aa3806f1c18d3d6a5a972def98103ba1a5a9ca3eec08d15f974b7',
@@ -90,7 +86,6 @@ dependencyVerification {
             'javax.inject:javax.inject:91c77044a50c481636c32d916fd89c9118a72195390452c81065080f957de7ff',
             'com.google.protobuf:protobuf-java:e0c1c64575c005601725e7c6a02cebf9e1285e888f756b2a1d73ffa8d725cc74',
             'com.googlecode.libphonenumber:libphonenumber:eba17eae81dd622ea89a00a3a8c025b2f25d342e0d9644c5b62e16f15687c3ab',
-            'org.whispersystems:gson:08f4f7498455d1539c9233e5aac18e9b1805815ef29221572996508eb512fe51',
             'org.whispersystems:axolotl-android:7617256d05aaecd7b5475cd55e42773d7079167a22ca48512bcb0f84f8473cc9',
             'com.android.support:support-v4:703572d3015a088cc5604b7e38885af3d307c829d0c5ceaf8654ff41c71cd160',
             'com.android.support:support-annotations:fdee2354787ef66b268e75958de3f7f6c4f8f325510a6dac9f49c929f83a63de',
@@ -145,6 +140,11 @@ android {
             aidl.srcDirs = ['androidTest/java']
             renderscript.srcDirs = ['androidTest/java']
         }
+    }
+
+    packagingOptions {
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
     }
 
      lintOptions {

@@ -16,10 +16,10 @@
  */
 package org.whispersystems.textsecure.internal.push;
 
+import android.text.TextUtils;
 import android.util.Log;
 
-import com.google.thoughtcrimegson.Gson;
-import com.google.thoughtcrimegson.JsonParseException;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.http.conn.ssl.StrictHostnameVerifier;
 import org.whispersystems.libaxolotl.IdentityKey;
@@ -36,6 +36,7 @@ import org.whispersystems.textsecure.api.push.exceptions.UnregisteredUserExcepti
 import org.whispersystems.textsecure.internal.push.exceptions.MismatchedDevicesException;
 import org.whispersystems.textsecure.internal.push.exceptions.StaleDevicesException;
 import org.whispersystems.textsecure.internal.util.Base64;
+import org.whispersystems.textsecure.internal.util.JsonUtil;
 import org.whispersystems.textsecure.internal.util.Util;
 import org.whispersystems.textsecure.api.push.exceptions.AuthorizationFailedException;
 import org.whispersystems.textsecure.api.push.exceptions.ExpectationFailedException;
@@ -121,17 +122,17 @@ public class PushServiceSocket {
   {
     AccountAttributes signalingKeyEntity = new AccountAttributes(signalingKey, supportsSms, registrationId);
     makeRequest(String.format(VERIFY_ACCOUNT_PATH, verificationCode),
-                "PUT", new Gson().toJson(signalingKeyEntity));
+                "PUT", JsonUtil.toJson(signalingKeyEntity));
   }
 
   public String getNewDeviceVerificationCode() throws IOException {
     String responseText = makeRequest(PROVISIONING_CODE_PATH, "GET", null);
-    return new Gson().fromJson(responseText, DeviceCode.class).getVerificationCode();
+    return JsonUtil.fromJson(responseText, DeviceCode.class).getVerificationCode();
   }
 
   public void sendProvisioningMessage(String destination, byte[] body) throws IOException {
     makeRequest(String.format(PROVISIONING_MESSAGE_PATH, destination), "PUT",
-                new Gson().toJson(new ProvisioningMessage(Base64.encodeBytes(body))));
+                JsonUtil.toJson(new ProvisioningMessage(Base64.encodeBytes(body))));
   }
 
   public void sendReceipt(String destination, long messageId, String relay) throws IOException {
@@ -146,7 +147,7 @@ public class PushServiceSocket {
 
   public void registerGcmId(String gcmRegistrationId) throws IOException {
     GcmRegistrationId registration = new GcmRegistrationId(gcmRegistrationId);
-    makeRequest(REGISTER_GCM_PATH, "PUT", new Gson().toJson(registration));
+    makeRequest(REGISTER_GCM_PATH, "PUT", JsonUtil.toJson(registration));
   }
 
   public void unregisterGcmId() throws IOException {
@@ -157,10 +158,10 @@ public class PushServiceSocket {
       throws IOException
   {
     try {
-      String responseText = makeRequest(String.format(MESSAGE_PATH, bundle.getDestination()), "PUT", new Gson().toJson(bundle));
+      String responseText = makeRequest(String.format(MESSAGE_PATH, bundle.getDestination()), "PUT", JsonUtil.toJson(bundle));
 
-      if (responseText == null) return new SendMessageResponse(false);
-      else                      return new Gson().fromJson(responseText, SendMessageResponse.class);
+      if (TextUtils.isEmpty(responseText)) return new SendMessageResponse(false);
+      else                                 return JsonUtil.fromJson(responseText, SendMessageResponse.class);
 
     } catch (NotFoundException nfe) {
       throw new UnregisteredUserException(bundle.getDestination(), nfe);
@@ -190,13 +191,13 @@ public class PushServiceSocket {
                                                                    signedPreKey.getSignature());
 
     makeRequest(String.format(PREKEY_PATH, ""), "PUT",
-                PreKeyState.toJson(new PreKeyState(entities, lastResortEntity,
-                                                   signedPreKeyEntity, identityKey)));
+                JsonUtil.toJson(new PreKeyState(entities, lastResortEntity,
+                                                signedPreKeyEntity, identityKey)));
   }
 
   public int getAvailablePreKeys() throws IOException {
     String       responseText = makeRequest(PREKEY_METADATA_PATH, "GET", null);
-    PreKeyStatus preKeyStatus = new Gson().fromJson(responseText, PreKeyStatus.class);
+    PreKeyStatus preKeyStatus = JsonUtil.fromJson(responseText, PreKeyStatus.class);
 
     return preKeyStatus.getCount();
   }
@@ -215,7 +216,7 @@ public class PushServiceSocket {
       }
 
       String             responseText = makeRequest(path, "GET", null);
-      PreKeyResponse     response     = PreKeyResponse.fromJson(responseText);
+      PreKeyResponse     response     = JsonUtil.fromJson(responseText, PreKeyResponse.class);
       List<PreKeyBundle> bundles      = new LinkedList<>();
 
       for (PreKeyResponseItem device : response.getDevices()) {
@@ -242,7 +243,7 @@ public class PushServiceSocket {
       }
 
       return bundles;
-    } catch (JsonParseException e) {
+    } catch (JsonUtil.JsonParseException e) {
       throw new IOException(e);
     } catch (NotFoundException nfe) {
       throw new UnregisteredUserException(destination.getNumber(), nfe);
@@ -259,7 +260,7 @@ public class PushServiceSocket {
       }
 
       String         responseText = makeRequest(path, "GET", null);
-      PreKeyResponse response     = PreKeyResponse.fromJson(responseText);
+      PreKeyResponse response     = JsonUtil.fromJson(responseText, PreKeyResponse.class);
 
       if (response.getDevices() == null || response.getDevices().size() < 1)
         throw new IOException("Empty prekey list");
@@ -284,7 +285,7 @@ public class PushServiceSocket {
 
       return new PreKeyBundle(device.getRegistrationId(), device.getDeviceId(), preKeyId, preKey,
                               signedPreKeyId, signedPreKey, signedPreKeySignature, response.getIdentityKey());
-    } catch (JsonParseException e) {
+    } catch (JsonUtil.JsonParseException e) {
       throw new IOException(e);
     } catch (NotFoundException nfe) {
       throw new UnregisteredUserException(destination.getNumber(), nfe);
@@ -294,7 +295,7 @@ public class PushServiceSocket {
   public SignedPreKeyEntity getCurrentSignedPreKey() throws IOException {
     try {
       String responseText = makeRequest(SIGNED_PREKEY_PATH, "GET", null);
-      return SignedPreKeyEntity.fromJson(responseText);
+      return JsonUtil.fromJson(responseText, SignedPreKeyEntity.class);
     } catch (NotFoundException e) {
       Log.w("PushServiceSocket", e);
       return null;
@@ -305,12 +306,12 @@ public class PushServiceSocket {
     SignedPreKeyEntity signedPreKeyEntity = new SignedPreKeyEntity(signedPreKey.getId(),
                                                                    signedPreKey.getKeyPair().getPublicKey(),
                                                                    signedPreKey.getSignature());
-    makeRequest(SIGNED_PREKEY_PATH, "PUT", SignedPreKeyEntity.toJson(signedPreKeyEntity));
+    makeRequest(SIGNED_PREKEY_PATH, "PUT", JsonUtil.toJson(signedPreKeyEntity));
   }
 
   public long sendAttachment(PushAttachmentData attachment) throws IOException {
     String               response      = makeRequest(String.format(ATTACHMENT_PATH, ""), "GET", null);
-    AttachmentDescriptor attachmentKey = new Gson().fromJson(response, AttachmentDescriptor.class);
+    AttachmentDescriptor attachmentKey = JsonUtil.fromJson(response, AttachmentDescriptor.class);
 
     if (attachmentKey == null || attachmentKey.getLocation() == null) {
       throw new IOException("Server failed to allocate an attachment key!");
@@ -332,7 +333,7 @@ public class PushServiceSocket {
     }
 
     String               response   = makeRequest(path, "GET", null);
-    AttachmentDescriptor descriptor = new Gson().fromJson(response, AttachmentDescriptor.class);
+    AttachmentDescriptor descriptor = JsonUtil.fromJson(response, AttachmentDescriptor.class);
 
     Log.w("PushServiceSocket", "Attachment: " + attachmentId + " is at: " + descriptor.getLocation());
 
@@ -343,8 +344,8 @@ public class PushServiceSocket {
       throws NonSuccessfulResponseCodeException, PushNetworkException
   {
     ContactTokenList        contactTokenList = new ContactTokenList(new LinkedList<>(contactTokens));
-    String                  response         = makeRequest(DIRECTORY_TOKENS_PATH, "PUT", new Gson().toJson(contactTokenList));
-    ContactTokenDetailsList activeTokens     = new Gson().fromJson(response, ContactTokenDetailsList.class);
+    String                  response         = makeRequest(DIRECTORY_TOKENS_PATH, "PUT", JsonUtil.toJson(contactTokenList));
+    ContactTokenDetailsList activeTokens     = JsonUtil.fromJson(response, ContactTokenDetailsList.class);
 
     return activeTokens.getContacts();
   }
@@ -352,7 +353,7 @@ public class PushServiceSocket {
   public ContactTokenDetails getContactTokenDetails(String contactToken) throws IOException {
     try {
       String response = makeRequest(String.format(DIRECTORY_VERIFY_PATH, contactToken), "GET", null);
-      return new Gson().fromJson(response, ContactTokenDetails.class);
+      return JsonUtil.fromJson(response, ContactTokenDetails.class);
     } catch (NotFoundException nfe) {
       return null;
     }
@@ -469,14 +470,14 @@ public class PushServiceSocket {
         } catch (IOException e) {
           throw new PushNetworkException(e);
         }
-        throw new MismatchedDevicesException(new Gson().fromJson(response, MismatchedDevices.class));
+        throw new MismatchedDevicesException(JsonUtil.fromJson(response, MismatchedDevices.class));
       case 410:
         try {
           response = Util.readFully(connection.getErrorStream());
         } catch (IOException e) {
           throw new PushNetworkException(e);
         }
-        throw new StaleDevicesException(new Gson().fromJson(response, StaleDevices.class));
+        throw new StaleDevicesException(JsonUtil.fromJson(response, StaleDevices.class));
       case 417:
         throw new ExpectationFailedException();
     }
@@ -562,6 +563,8 @@ public class PushServiceSocket {
   }
 
   private static class GcmRegistrationId {
+
+    @JsonProperty
     private String gcmRegistrationId;
 
     public GcmRegistrationId() {}
@@ -572,7 +575,10 @@ public class PushServiceSocket {
   }
 
   private static class AttachmentDescriptor {
+    @JsonProperty
     private long id;
+
+    @JsonProperty
     private String location;
 
     public long getId() {

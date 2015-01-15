@@ -72,7 +72,6 @@ public class ApplicationContext extends Application implements DependencyInjecto
     return jobManager;
   }
 
-
   private void initializeRandomNumberFix() {
     PRNGFixes.apply();
   }
